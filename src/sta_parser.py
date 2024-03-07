@@ -4,6 +4,11 @@ for bench mark
 references: 
 https://www.geeksforgeeks.org/command-line-arguments-in-python/
 '''
+
+import re
+import sys
+
+
 class Node:
     def __init__(self):
         self.name = ""
@@ -199,9 +204,65 @@ class LUT:
                 op_file.write("\n\n")
         
 
+class circuit(Node):
+    def __init__(self):
+        super().__init__()
+        self.nodes=[]
+        self.inputs=[]
+        self.outputs=[]
+        self.dict={}
+    
+    def add_new_node(self):    #adds new nodes to circuit used in the function later
+        new_node = Node()
+        self.nodes.append(new_node)
+    
+    def circuit_parsing(self,file):      ##reads the circuit from the file and writes it to ckt_details.txt
+        with open(file,"r") as f:                      #opening the file
+            content=f.read()
+            content = re.sub("\n","",re.sub("#.*\n","\n",content))          #removing the comments and endline gaps
+            lines = re.split('\)',content)              #splitting the lines using the )
+        
+        for x in lines:
+            y=x.replace(' ','').replace('=',' ').replace('(',' ').replace(',',' ')      #replacimg the string seperators using spaces
+            A=y.split(sep=' ')                  #splitting the string so that each valid element is sent to each value of list
+            if len(A)!=1:
+                if A[0] == 'INPUT' or A[0] == 'OUTPUT':
+                    self.add_new_node()
+                    self.dict[A[1]] = len(self.nodes)-1
+                    self.nodes[self.dict[A[1]]].name=A[1]
+                    if A[0] == 'INPUT':
+                        self.inputs.append(A[0])
+                    else:
+                        self.outputs.append(A[0])
+                else:
+                    if A[0] not in list(self.dict):
+                        self.add_new_node()
+                        self.dict[A[0]] = len(self.nodes)-1
+                        self.nodes[self.dict[A[0]]].name=A[0]
+                    else:
+                        self.nodes[self.dict[A[0]]].name=A[0]
+                        self.nodes[self.dict[A[0]]].outputs.append(A[0])
 
-import re
-import sys
+        for x in lines:
+            y=x.replace(' ','').replace('=',' ').replace('(',' ').replace(',',' ')      #replacimg the string seperators using spaces
+            A=y.split(sep=' ')                  #splitting the string so that each valid element is sent to each value of list
+            if len(A)!=1:
+                if A[0] == 'INPUT':
+                    self.nodes[self.dict[A[1]]].outname=A[0]
+                elif A[0]!='OUTPUT':
+                    self.nodes[self.dict[A[0]]].outname=A[1]
+                    for i in range(2,len(A)):
+                        self.nodes[self.dict[A[0]]].inputs.append(A[i])
+                        self.nodes[self.dict[A[i]]].outputs.append(A[0])
+
+    def circuit_to_file(self,file):
+        for x in self.nodes:
+            x.print_name()
+
+
+C=circuit()
+C.circuit_parsing('c17.bench')
+C.circuit_to_file('ckt_details.txt')
 
 A=sys.argv              #reading the arguments in the command line
 option='read_NLDM'
@@ -210,7 +271,7 @@ read_NLDM_option = ''
 if len(A)==3:
     option=A[1].replace('-','')
     file_name=A[2]
-else:
+elif len(A)==4:
     option=A[2].replace('-','')
     file_name=A[3]
     read_NLDM_option=A[1].replace('-','')
