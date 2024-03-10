@@ -1,0 +1,33 @@
+LUT in the class circuit as parent 
+
+LUTlist in the class circuit and dictionary in the class circuit 
+
+Output Capacitance of the interior nodes is based on the fanouts of the gates summation of all the fanouts input capacitance
+
+
+One cell delay function is enough = > goes by the equation find the index which is just lower to it 
+
+How to do ??
+    ---> First find out delays of each gate 
+        ---> Add the inputs to a queue
+            ---> Check if node at top is input
+                ---> Add the arrival time as 0 and slew as the given value 
+                ---> Add the fanout of the nodes which are not itself to the queue
+            ---> else if the node at top has all inputs(fanins) with arrival time
+                ---> if ready pop it and find delay
+                    ---> Add the fanout of the nodes which are not itself to the queue
+                ---> else add it to the queue
+        
+    ---> Find required arrival times and slacks of each gate 
+        ---> Add all the outputs to a queue
+            ---> Check if node at top is output
+                ---> Add the required arrival time as the 1.1 times delay and findout slack
+                ---> Add the fanin of the nodes which are not itself as inputs.
+            ---> else if the node at top has all fanouts with required arrival time
+                ---> if ready pop it and find required arrival time and slacks.
+                    ---> add the fanin of the nodes which are not itself to the queue
+                ---> else add it to the queue
+    
+
+    ---> Pick the nodes with least slacks from the output
+    

@@ -58,6 +58,8 @@ class Node:
         print(self.fanoutstr)
         print("\n")
         #print(type(self.name))
+        print('capacitance')
+        print(self.Cload)
 
     def name_check(self, x):                #function to check the name with a given string x
         return self.name == x
@@ -85,6 +87,7 @@ class Node:
 class LUT:
     def __init__(self):
         self.Allgate_name = '' #all cells defined in the LUT
+        self.capacitance = 0.0
         self.All_delays =[] #2D numpy array delay LUTs for each cell
         self.All_slews = []#2D numpy array to store output slew LUTs foreach cell
         self.Cload_vals = [] #1D numpy array corresponds to the 2nd index in the LUT
@@ -98,10 +101,12 @@ class LUT:
     def assign_data(self,x):                            # function to load data of a lut which is compacted into a single string
         self.Allgate_name = re.search('[0-9a-zA-Z_]+\)',x).group(0)     #getting the name of the gate with trailing )
         self.Allgate_name = self.Allgate_name[0:len(self.Allgate_name)-1]   #removing the trailing )
-        cell_Delay_string = re.search('cell_delay\([\da-zA-Z_){(".,;]+\}',x).group(0)   #extracting the cell delay block    
+        cell_Delay_string = re.search('cell_delay\([\da-zA-Z_){(".,;]+\}',x).group(0)   #extracting the cell delay block
+        self.capacitance = float(re.search('[\d.]+',re.search('capacitance:[\d.]+;',x).group(0)).group(0)) #extracting the capacitance
         output_slew_string = re.search('output_slew\([\da-zA-Z_){(".,;]+\}',x).group(0) #extracting the output slew block
         index_1_list = re.search('[0-9,.][0-9,.]+',re.search('index_1 *\( *"[\d,.]+"\)',cell_Delay_string).group(0)).group(0).split(sep=',')    #getting a string list of index1 from the cell delay string
         index_2_list = re.search('[0-9,.][0-9,.]+',re.search('index_2 *\( *"[\d,.]+"\)',cell_Delay_string).group(0)).group(0).split(sep=',')    #getting a string list of index2 from the cell delay string
+        print(index_2_list)
         self.Tau_in_vals = index_1_list #assigning the values of index1
         self.Cload_vals = index_2_list  #assigning the values of index2
         cell_delay_values = re.search('["0-9.,]+',re.search('values[("0-9.,)]+',cell_Delay_string).group(0)).group(0).replace('","','";"').split(sep=';')   #getting a list of string which contains row of values of cell delay
@@ -123,6 +128,7 @@ class LUT:
         print(self.All_slews)#2D numpy array to store output slew LUTs foreach cell
         print(self.Cload_vals)#1D numpy array corresponds to the 2nd index in the LUT
         print(self.Tau_in_vals) #1D numpy array corresponds to the 1st index in the LUT
+        print(self.capacitance)
         print("\n\n\n")
 
     def display_delays(self):   #display the values when delays is askked
@@ -141,7 +147,7 @@ class LUT:
             op_file.write(f"input slews:  {index1}\n")
         #print('input slews: ', index1)
         index2 = ''
-        for x in self.Tau_in_vals:
+        for x in self.Cload_vals:
             if index2 != '':
                 index2 = index2 + ',' + x
             else:
@@ -202,15 +208,36 @@ class LUT:
                 op_file.write(a)
         with open("slew_LUT.txt","a") as op_file:
                 op_file.write("\n\n")
-        
 
-class circuit(Node):
+    def findout_delay(self,index1,index2):
+        for i in range(len(self.Tau_in_vals)-1):
+            if float(self.Tau_in_vals[i])<=index1 and float(self.Tau_in_vals[i+1])>index1:
+                tl=float(self.Tau_in_vals[i])
+                tu=float(self.Tau_in_vals[i+1])
+                ti=i
+        
+        for i in range(len(self.Cload_vals)-1):
+            if float(self.Cload_vals[i])<=index2 and float(self.Cload_vals[i+1])>index2:
+                cl=float(self.Cload_vals[i])
+                cu=float(self.Cload_vals[i+1])
+                ci=i
+        
+        delay = ((float(self.All_delays[ti][ci])*(cu-index1)*(tu-index2)) + (float(self.All_delays[ti][ci+1])*(index1-cl)*(tu-index2)) + (float(self.All_delays[ti+1][ci])*(cu-index1)*(index2-tl)) + (float(self.All_delays[ti+1][ci+1])*(index1-cl)*(index2-tl)))/((cu-cl)*(tu-tl))
+        slew = ((float(self.All_slews[ti][ci])*(cu-index1)*(tu-index2)) + (float(self.All_slews[ti][ci+1])*(index1-cl)*(tu-index2)) + (float(self.All_slews[ti+1][ci])*(cu-index1)*(index2-tl)) + (float(self.All_slews[ti+1][ci+1])*(index1-cl)*(index2-tl)))/((cu-cl)*(tu-tl))
+        
+        return delay,slew
+
+
+class circuit(Node,LUT):
     def __init__(self):
-        super().__init__()
+        Node.__init__(self)
+        LUT.__init__(self)
         self.nodes=[]
         self.inputs=[]
         self.outputs=[]
         self.dict={}
+        self.LUT_list=[]
+        self.LUT_dict={}
     
     def add_new_node(self):    #adds new nodes to circuit used in the function later
         new_node = Node()
@@ -259,10 +286,39 @@ class circuit(Node):
         for x in self.nodes:
             x.print_name()
 
+    def LUT_parsing(self,file):
+        file='sample_NLDM.lib'
+        with open(file,"r") as f:          #reading the file
+            content =f.read()
+            content =content.replace("\n","").replace("\t","").replace(" ","").replace("\\","")         ##replacing the endlines and tabs and spaces so that the string will be in one line
+            content = re.sub("\/\*.*\*\/","",content)           ## removing the coments which are of the format /*.....*/.
+            lines = re.split('cell *?\(',content)           ##splitting each celll based on the format given which is cell(
+ 
+        for x in lines:
+            if x[0:7] != 'library':         # the string part which starts with library when split in the explained format has the capacitances which is currently not required for phase 1 so ignored that part
+                c=LUT()     #creating new LUT
+                c.assign_data(x)    #filling the LUT object with its required data
+                self.LUT_list.append(c)         #creating a list of LUT objects
+                self.LUT_dict[re.match(r'^([A-Z]+)' ,c.Allgate_name).group(0)]=len(self.LUT_list)-1
+        
+        for x in self.LUT_list:
+            x.display()
 
-C=circuit()
-C.circuit_parsing('c17.bench')
-C.circuit_to_file('ckt_details.txt')
+        print(list(self.LUT_dict))
+
+    def output_capacitance(self):
+        for a in self.nodes:
+            for b in a.outputs:
+                if(b!=a.name):
+                    a.Cload = a.Cload + (self.LUT_list[self.LUT_dict[self.nodes[self.dict[b]].outname]].capacitance)
+
+                else:
+                    a.Cload = a.Cload + 4*(self.LUT_list[self.LUT_dict['INV']].capacitance)
+                #multiplier = len(self.nodes[self.dict[b]].inputs)
+                #if multiplier <= 2:
+                #    a.Cload  = a.Cload + (self.LUT_list[self.LUT_dict[b.outname]].capacitance) 
+                #else:
+                #    a.Cload = a.Cload + (self.LUT_list[self.LUT_dict[b.outname]].capacitance) * int(multiplier/2)
 
 A=sys.argv              #reading the arguments in the command line
 option='read_NLDM'
