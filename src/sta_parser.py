@@ -19,6 +19,7 @@ class Node:
         self.Tau_in = [] # array/list of input slews (for all inputs to the gate), to be used for STA
         self.inp_arrival = [] # array/list of input arrival times for input transitions (ignore rise or fall)
         self.outp_arrival = [] # array/list of output arrival times,outp_arrival = inp_arrival + cell_delay
+        self.outp_slews = []
         self.max_out_arrival = 0.0 # arrival time at the output of thisgate using max on (inp_arrival +cell_delay)
         self.Tau_out = 0.0 # Resulting output slew
         self.faninstr = ''
@@ -209,7 +210,11 @@ class LUT:
         with open("slew_LUT.txt","a") as op_file:
                 op_file.write("\n\n")
 
-    def findout_delay(self,index1,index2):
+    def findout_delay(self,index1_s,index2_s):
+        index1=float(index1_s)
+        index2=float(index2_s)
+        #print(index1)
+        #print(index2)
         for i in range(len(self.Tau_in_vals)-1):
             if float(self.Tau_in_vals[i])<=index1 and float(self.Tau_in_vals[i+1])>index1:
                 tl=float(self.Tau_in_vals[i])
@@ -221,10 +226,25 @@ class LUT:
                 cl=float(self.Cload_vals[i])
                 cu=float(self.Cload_vals[i+1])
                 ci=i
+        #print(ti)
+        #print(ci)
+        #print("input slew",tl,",",tu)
+        #print("Cload" ,cl,",",cu)
+        #print(self.All_slews[ti][ci]," ,",self.All_slews[ti][ci+1] )
+        #print(self.All_slews[ti+1][ci]," ,", self.All_slews[ti+1][ci+1])
+        s1=(float(self.All_slews[ti][ci])*(tu-index1)*(cu-index2))
+        s2=(float(self.All_slews[ti+1][ci])*(index1-tl)*(cu-index2))
+        s3=(float(self.All_slews[ti][ci+1])*(tu-index1)*(index2-cl))
+        s4=(float(self.All_slews[ti+1][ci+1])*(index1-tl)*(index2-cl))
         
-        delay = ((float(self.All_delays[ti][ci])*(cu-index1)*(tu-index2)) + (float(self.All_delays[ti][ci+1])*(index1-cl)*(tu-index2)) + (float(self.All_delays[ti+1][ci])*(cu-index1)*(index2-tl)) + (float(self.All_delays[ti+1][ci+1])*(index1-cl)*(index2-tl)))/((cu-cl)*(tu-tl))
-        slew = ((float(self.All_slews[ti][ci])*(cu-index1)*(tu-index2)) + (float(self.All_slews[ti][ci+1])*(index1-cl)*(tu-index2)) + (float(self.All_slews[ti+1][ci])*(cu-index1)*(index2-tl)) + (float(self.All_slews[ti+1][ci+1])*(index1-cl)*(index2-tl)))/((cu-cl)*(tu-tl))
-        
+        d1=(float(self.All_delays[ti][ci])*(tu-index1)*(cu-index2))
+        d2=(float(self.All_delays[ti+1][ci])*(index1-tl)*(cu-index2))
+        d3=(float(self.All_delays[ti][ci+1])*(tu-index1)*(index2-cl))
+        d4=(float(self.All_delays[ti+1][ci+1])*(index1-tl)*(index2-cl))
+        #delay = ((float(self.All_delays[ti][ci])*(tu-index1)*(tu-index2)) + (float(self.All_delays[ti][ci+1])*(index1-cl)*(tu-index2)) + (float(self.All_delays[ti+1][ci])*(cu-index1)*(index2-tl)) + (float(self.All_delays[ti+1][ci+1])*(index1-cl)*(index2-tl)))
+        #slew = ((float(self.All_slews[ti][ci])*(cu-index1)*(tu-index2)) + (float(self.All_slews[ti][ci+1])*(index1-cl)*(tu-index2)) + (float(self.All_slews[ti+1][ci])*(cu-index1)*(index2-tl)) + (float(self.All_slews[ti+1][ci+1])*(index1-cl)*(index2-tl)))
+        slew = (s1+s2+s3+s4)/((cu-cl)*(tu-tl))
+        delay = (d1+d2+d3+d4)/((cu-cl)*(tu-tl))
         return delay,slew
 
 
@@ -238,6 +258,8 @@ class circuit(Node,LUT):
         self.dict={}
         self.LUT_list=[]
         self.LUT_dict={}
+        self.req_arr_times=[]
+        self.slacks=[]
     
     def add_new_node(self):    #adds new nodes to circuit used in the function later
         new_node = Node()
@@ -258,9 +280,9 @@ class circuit(Node,LUT):
                     self.dict[A[1]] = len(self.nodes)-1
                     self.nodes[self.dict[A[1]]].name=A[1]
                     if A[0] == 'INPUT':
-                        self.inputs.append(A[0])
+                        self.inputs.append(A[1])
                     else:
-                        self.outputs.append(A[0])
+                        self.outputs.append(A[1])
                 else:
                     if A[0] not in list(self.dict):
                         self.add_new_node()
@@ -319,6 +341,90 @@ class circuit(Node,LUT):
                 #    a.Cload  = a.Cload + (self.LUT_list[self.LUT_dict[b.outname]].capacitance) 
                 #else:
                 #    a.Cload = a.Cload + (self.LUT_list[self.LUT_dict[b.outname]].capacitance) * int(multiplier/2)
+    def circuit_delay(self):
+        queue=self.inputs
+        print(queue)
+        while(len(queue)!=0):
+            a=queue.pop(0)
+            if self.nodes[self.dict[a]].outname == 'INPUT':
+                #self.nodes[self.dict[a]].outp_arrival.append(0.00)
+                self.nodes[self.dict[a]].max_out_arrival=0.00
+                self.nodes[self.dict[a]].Tau_out=0.002
+                for x in self.nodes[self.dict[a]].outputs:
+                    self.nodes[self.dict[x]].inp_arrival.append(self.nodes[self.dict[a]].max_out_arrival)
+                    self.nodes[self.dict[x]].Tau_in.append(self.nodes[self.dict[a]].Tau_out)
+                    if x!=a and x not in queue:
+                        queue.append(x)
+            else:
+                if len(self.nodes[self.dict[a]].inputs) == len(self.nodes[self.dict[a]].inp_arrival):
+                    print(a,"ready")
+                    for i in range(len(self.nodes[self.dict[a]].inputs)):
+                        delay,slew=self.LUT_list[self.LUT_dict[self.nodes[self.dict[a]].outname]].findout_delay(self.nodes[self.dict[a]].Tau_in[i],self.nodes[self.dict[a]].Cload)
+                        if len(self.nodes[self.dict[a]].inputs)>2:
+                            delay = delay * int(len(self.nodes[self.dict[a]].inputs)/2)
+                            slew = slew * int(len(self.nodes[self.dict[a]].inputs)/2)
+                        self.nodes[self.dict[a]].outp_arrival.append( self.nodes[self.dict[a]].inp_arrival[i] + delay)
+                        self.nodes[self.dict[a]].outp_slews.append(slew)
+                    print("delay",self.nodes[self.dict[a]].outp_arrival)
+                    print("slews",self.nodes[self.dict[a]].outp_slews)
+                    self.nodes[self.dict[a]].max_out_arrival = max(self.nodes[self.dict[a]].outp_arrival)
+                    for i in range(len(self.nodes[self.dict[a]].outp_arrival)):
+                        if self.nodes[self.dict[a]].outp_arrival[i] == self.nodes[self.dict[a]].max_out_arrival:
+                            self.nodes[self.dict[a]].Tau_out=self.nodes[self.dict[a]].outp_slews[i]
+                    for x in self.nodes[self.dict[a]].outputs:
+                        if x!=a:
+                            self.nodes[self.dict[x]].inp_arrival.append(self.nodes[self.dict[a]].max_out_arrival)
+                            self.nodes[self.dict[x]].Tau_in.append(self.nodes[self.dict[a]].Tau_out)
+                        if x!=a and x not in queue:
+                            queue.append(x)
+                else:
+                    queue.append(a)
+            print(queue)
+
+    def required_times(self):
+        mx=0.00
+        for x in self.outputs:
+            mx = max(self.nodes[self.dict[x]].max_out_arrival,mx)
+        self.req_arr_times=[0.00]*len(self.nodes)
+        visited=[0]*len(self.nodes)
+        for x in self.outputs:
+            self.req_arr_times[self.dict[x]]=1.1*mx
+        queue=self.outputs
+        count=0
+        while(len(queue)!=0):
+            count=count+1
+            print(queue)
+            print(visited)
+            a=queue.pop(0)
+            traverse=1
+            ##to check if all the fanouts of the present node are visited except itself
+            for x in self.nodes[self.dict[a]].outputs:
+                print(x,a)
+                if x!=a:
+                    if visited[self.dict[x]]==0:
+                        queue.append(a)
+                        traverse=0
+                        break
+            print(traverse)
+            if traverse==1:
+                delay=0.00
+                for i in range(len(self.nodes[self.dict[a]].outp_arrival)):
+                    delay=self.nodes[self.dict[a]].outp_arrival[i]-self.nodes[self.dict[a]].inp_arrival[i]
+                    self.req_arr_times[self.dict[self.nodes[self.dict[a]].inputs[i]]]=max(delay, self.req_arr_times[self.dict[self.nodes[self.dict[a]].inputs[i]]])
+                    if self.nodes[self.dict[a]].inputs[i] not in queue:
+                        queue.append(self.nodes[self.dict[a]].input[i])
+                visited[self.dict[a]]=1
+            if count>30:
+                break
+        print(count)
+        print(self.req_arr_times)
+
+            
+
+
+
+
+            
 
 A=sys.argv              #reading the arguments in the command line
 option='read_NLDM'
