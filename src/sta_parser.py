@@ -351,11 +351,17 @@ class circuit(Node,LUT):
                 self.nodes[self.dict[a]].max_out_arrival=0.00
                 self.nodes[self.dict[a]].Tau_out=0.002
                 for x in self.nodes[self.dict[a]].outputs:
-                    self.nodes[self.dict[x]].inp_arrival.append(self.nodes[self.dict[a]].max_out_arrival)
-                    self.nodes[self.dict[x]].Tau_in.append(self.nodes[self.dict[a]].Tau_out)
                     if x!=a and x not in queue:
                         queue.append(x)
             else:
+                for i in range(len(self.nodes[self.dict[a]].inputs)):
+                    if i==len(self.nodes[self.dict[a]].inp_arrival):
+                        if self.nodes[self.dict[self.nodes[self.dict[a]].inputs[i]]].Tau_out !=0.00:
+                            self.nodes[self.dict[a]].inp_arrival.append(self.nodes[self.dict[self.nodes[self.dict[a]].inputs[i]]].max_out_arrival)
+                            self.nodes[self.dict[a]].Tau_in.append(self.nodes[self.dict[self.nodes[self.dict[a]].inputs[i]]].Tau_out)
+                        else:
+                            break
+                
                 if len(self.nodes[self.dict[a]].inputs) == len(self.nodes[self.dict[a]].inp_arrival):
                     print(a,"ready")
                     for i in range(len(self.nodes[self.dict[a]].inputs)):
@@ -372,9 +378,6 @@ class circuit(Node,LUT):
                         if self.nodes[self.dict[a]].outp_arrival[i] == self.nodes[self.dict[a]].max_out_arrival:
                             self.nodes[self.dict[a]].Tau_out=self.nodes[self.dict[a]].outp_slews[i]
                     for x in self.nodes[self.dict[a]].outputs:
-                        if x!=a:
-                            self.nodes[self.dict[x]].inp_arrival.append(self.nodes[self.dict[a]].max_out_arrival)
-                            self.nodes[self.dict[x]].Tau_in.append(self.nodes[self.dict[a]].Tau_out)
                         if x!=a and x not in queue:
                             queue.append(x)
                 else:
@@ -385,10 +388,8 @@ class circuit(Node,LUT):
         mx=0.00
         for x in self.outputs:
             mx = max(self.nodes[self.dict[x]].max_out_arrival,mx)
-        self.req_arr_times=[0.00]*len(self.nodes)
+        self.req_arr_times=[1.1*mx]*len(self.nodes)
         visited=[0]*len(self.nodes)
-        for x in self.outputs:
-            self.req_arr_times[self.dict[x]]=1.1*mx
         queue=self.outputs
         count=0
         while(len(queue)!=0):
@@ -410,14 +411,20 @@ class circuit(Node,LUT):
                 delay=0.00
                 for i in range(len(self.nodes[self.dict[a]].outp_arrival)):
                     delay=self.nodes[self.dict[a]].outp_arrival[i]-self.nodes[self.dict[a]].inp_arrival[i]
-                    self.req_arr_times[self.dict[self.nodes[self.dict[a]].inputs[i]]]=max(delay, self.req_arr_times[self.dict[self.nodes[self.dict[a]].inputs[i]]])
+                    self.req_arr_times[self.dict[self.nodes[self.dict[a]].inputs[i]]]=min(self.req_arr_times[self.dict[a]]-delay, self.req_arr_times[self.dict[self.nodes[self.dict[a]].inputs[i]]])
                     if self.nodes[self.dict[a]].inputs[i] not in queue:
-                        queue.append(self.nodes[self.dict[a]].input[i])
+                        queue.append(self.nodes[self.dict[a]].inputs[i])
                 visited[self.dict[a]]=1
             if count>30:
                 break
         print(count)
         print(self.req_arr_times)
+
+    def slacks_find(self):
+        self.slacks=[0.00]*len(self.nodes)
+        for i in range(len(self.nodes)):
+            self.slacks[i]=self.req_arr_times[i]-self.nodes[i].max_out_arrival
+    
 
             
 

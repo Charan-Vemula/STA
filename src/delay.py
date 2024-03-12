@@ -25,6 +25,21 @@ C.output_capacitance()
 C.circuit_to_file('ckt_details.txt')
 C.circuit_delay()
 print("circuit_delay done")
+C.required_times()
+C.slacks_find()
+print(C.req_arr_times)
+
+count=0
+for x in C.nodes:
+     print("node",x.name)
+     print("Outp_arrival",x.outp_arrival)
+     print("input_arrivaal",x.inp_arrival)
+     print("Inputs",x.inputs)
+     print("Outputs",x.outputs)
+     print("Required Arrival TIme",C.req_arr_times[count])
+     print("slack" ,C.slacks[count])
+     count=count+1
+     print("\n\n\n")
 
 print("Node 23")
 print(C.nodes[6].outp_arrival)
