@@ -322,7 +322,23 @@ class circuit(Node,LUT):
                 c.assign_data(x)    #filling the LUT object with its required data
                 self.LUT_list.append(c)         #creating a list of LUT objects
                 self.LUT_dict[re.match(r'^([A-Z]+)' ,c.Allgate_name).group(0)]=len(self.LUT_list)-1
+                #print(c.Allgate_name)
+                if c.Allgate_name=='INV_X1':
+                    c=LUT()     #creating new LUT
+                    c.assign_data(x)    #filling the LUT object with its required data
+                             #creating a list of LUT objects
+                    #self.LUT_dict[re.match(r'^([A-Z]+)' ,c.Allgate_name).group(0)]=len(self.LUT_list)-1
+                    c.Allgate_name='NOT_X1'
+                    self.LUT_list.append(c)
+                    self.LUT_dict['NOT']=len(self.LUT_list)-1
         
+        '''for x in self.LUT_list:
+            print(x.Allgate_name)
+        print(len(self.LUT_list))
+        print(self.LUT_dict)
+        for x in list(self.LUT_dict):
+            print(x)
+        '''
         #for x in self.LUT_list:
           #  x.display()
 
