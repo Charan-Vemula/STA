@@ -358,7 +358,7 @@ class circuit(Node,LUT):
                 #else:
                 #    a.Cload = a.Cload + (self.LUT_list[self.LUT_dict[b.outname]].capacitance) * int(multiplier/2)
     def circuit_delay(self):
-        queue=self.inputs
+        queue=self.inputs[:]
         #print(queue)
         while(len(queue)!=0):
             a=queue.pop(0)
@@ -407,7 +407,7 @@ class circuit(Node,LUT):
             mx = max(self.nodes[self.dict[x]].max_out_arrival,mx)
         self.req_arr_times=[1.1*mx]*len(self.nodes)
         visited=[0]*len(self.nodes)
-        queue=self.outputs
+        queue=self.outputs[:]
         count=0
         while(len(queue)!=0):
             count=count+1
@@ -442,16 +442,28 @@ class circuit(Node,LUT):
 
     def path_find(self):
         mn=float('inf')
+        #print('minimum',mn)
+        #print(self.outputs)
         for x in self.outputs:
             mn =min(mn,self.slacks[self.dict[x]])
-        
+            #print(mn)
         for x in self.outputs:
             if self.slacks[self.dict[x]]==mn:
-                output=x
+                current=x
                 break
         
-        current=output
+        
         string='OUTPUT-'+str(current)
+        while self.nodes[self.dict[current]].outname!='INPUT':
+            mn=float('inf')
+            string=self.nodes[self.dict[current]].outname +'-'+ self.nodes[self.dict[current]].name + ', '+string
+            for x in self.nodes[self.dict[current]].inputs:
+                mn=min(mn,self.slacks[self.dict[x]])
+            for x in self.nodes[self.dict[current]].inputs:
+                if self.slacks[self.dict[x]]==mn:
+                    current=x
+                    break
+        string=self.nodes[self.dict[current]].outname +'-'+ self.nodes[self.dict[current]].name + ', '+string
         return string
 
             

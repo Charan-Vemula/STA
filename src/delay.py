@@ -27,6 +27,7 @@ C.circuit_delay()
 print("circuit_delay done")
 C.required_times()
 C.slacks_find()
+print(C.path_find())
 #print(C.req_arr_times)
 
 count=0
