@@ -2,7 +2,7 @@ import re,sys
 from sta_parser import circuit, LUT
 
 C=circuit()
-C.circuit_parsing('c17.bench')
+C.circuit_parsing('c6288.bench')
 
 
 lut_list=[]

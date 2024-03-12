@@ -482,14 +482,22 @@ class circuit(Node,LUT):
         string='OUTPUT-'+str(current)
         while self.nodes[self.dict[current]].outname!='INPUT':
             mn=float('inf')
-            string=self.nodes[self.dict[current]].outname +'-'+ self.nodes[self.dict[current]].name + ', '+string
+            atmax=0.00
+            string=self.nodes[self.dict[current]].outname +'-'+ self.nodes[self.dict[current]].name + ','+string
             for x in self.nodes[self.dict[current]].inputs:
-                mn=min(mn,self.slacks[self.dict[x]])
+                if mn==round(self.slacks[self.dict[x]]*1000,4):
+                    atmax=max(atmax,self.req_arr_times[self.dict[x]])
+                elif mn > round(self.slacks[self.dict[x]]*1000,4):
+                    mn=round(self.slacks[self.dict[x]]*1000,4)
+                    atmax=self.req_arr_times[self.dict[x]]
+            '''if current == '1578' or current =='1819':
+                for x in self.nodes[self.dict[current]].inputs:
+                    print(current,'    ',x,'    ',self.slacks[self.dict[x]],'    ',self.req_arr_times[self.dict[x]])'''
             for x in self.nodes[self.dict[current]].inputs:
-                if self.slacks[self.dict[x]]==mn:
+                if round(self.slacks[self.dict[x]]*1000,4)==mn and atmax == self.req_arr_times[self.dict[x]] :
                     current=x
                     break
-        string=self.nodes[self.dict[current]].outname +'-'+ self.nodes[self.dict[current]].name + ', '+string
+        string=self.nodes[self.dict[current]].outname +'-'+ self.nodes[self.dict[current]].name + ','+string
         return string
 
             
