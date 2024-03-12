@@ -215,17 +215,38 @@ class LUT:
         index2=float(index2_s)
         #print(index1)
         #print(index2)
-        for i in range(len(self.Tau_in_vals)-1):
-            if float(self.Tau_in_vals[i])<=index1 and float(self.Tau_in_vals[i+1])>index1:
-                tl=float(self.Tau_in_vals[i])
-                tu=float(self.Tau_in_vals[i+1])
-                ti=i
-        
-        for i in range(len(self.Cload_vals)-1):
-            if float(self.Cload_vals[i])<=index2 and float(self.Cload_vals[i+1])>index2:
-                cl=float(self.Cload_vals[i])
-                cu=float(self.Cload_vals[i+1])
-                ci=i
+        if(index1<float(self.Tau_in_vals[0])):
+            ti=0
+            tl=float(self.Tau_in_vals[0])
+            tu=float(self.Tau_in_vals[1])
+        elif(index1<float(self.Tau_in_vals[len(self.Tau_in_vals)-1])):
+            for i in range(len(self.Tau_in_vals)-1):
+                if float(self.Tau_in_vals[i])<=index1 and float(self.Tau_in_vals[i+1])>index1:
+                    tl=float(self.Tau_in_vals[i])
+                    tu=float(self.Tau_in_vals[i+1])
+                    ti=i
+                    break
+        else:
+            ti=len(self.Tau_in_vals)-2
+            tl=float(self.Tau_in_vals[ti])
+            tu=float(self.Tau_in_vals[ti+1])
+        if index2<float(self.Cload_vals[0]):
+            ci=0
+            cl=float(self.Cload_vals[0])
+            cu=float(self.Cload_vals[1])
+        elif index2<float(self.Cload_vals[len(self.Cload_vals)-1]):    
+            for i in range(len(self.Cload_vals)-1):
+                if float(self.Cload_vals[i])<=index2 and float(self.Cload_vals[i+1])>index2:
+                    cl=float(self.Cload_vals[i])
+                    cu=float(self.Cload_vals[i+1])
+                    ci=i
+                    break
+        else:
+            ci=len(self.Cload_vals)-2
+            cl=float(self.Cload_vals[ci])
+            cu=float(self.Cload_vals[ci+1])
+        print(ti)
+        print(ci)
         #print(ti)
         #print(ci)
         #print("input slew",tl,",",tu)
@@ -324,13 +345,20 @@ class circuit(Node,LUT):
                 self.LUT_dict[re.match(r'^([A-Z]+)' ,c.Allgate_name).group(0)]=len(self.LUT_list)-1
                 #print(c.Allgate_name)
                 if c.Allgate_name=='INV_X1':
-                    c=LUT()     #creating new LUT
-                    c.assign_data(x)    #filling the LUT object with its required data
+                    c1=LUT()     #creating new LUT
+                    c1.assign_data(x)    #filling the LUT object with its required data
                              #creating a list of LUT objects
                     #self.LUT_dict[re.match(r'^([A-Z]+)' ,c.Allgate_name).group(0)]=len(self.LUT_list)-1
-                    c.Allgate_name='NOT_X1'
-                    self.LUT_list.append(c)
+                    c1.Allgate_name='NOT_X1'
+                    self.LUT_list.append(c1)
                     self.LUT_dict['NOT']=len(self.LUT_list)-1
+
+                if c.Allgate_name=='BUF_X1':
+                    c1=LUT()
+                    c1.assign_data(x)
+                    c1.Allgate_name='BUFF_X1'
+                    self.LUT_list.append(c1)
+                    self.LUT_dict['BUFF']=len(self.LUT_list)-1
         
         '''for x in self.LUT_list:
             print(x.Allgate_name)

@@ -2,7 +2,7 @@ import re,sys
 from sta_parser import circuit, LUT
 
 C=circuit()
-C.circuit_parsing('c432.bench')
+C.circuit_parsing('c17.bench')
 
 
 lut_list=[]
@@ -22,13 +22,15 @@ for x in lines:
 
 C.LUT_parsing('sample_NLDM.lib')
 C.output_capacitance()
-#C.circuit_to_file('ckt_details.txt')
+C.circuit_to_file('ckt_details.txt')
 C.circuit_delay()
 print("circuit_delay done")
 C.required_times()
 C.slacks_find()
 print(C.path_find())
 #print(C.req_arr_times)
+
+#print(C.LUT_list[0].findout_delay(0.2,60))
 
 count=0
 for x in C.nodes:
