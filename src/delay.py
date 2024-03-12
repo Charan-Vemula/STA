@@ -36,11 +36,12 @@ for x in C.nodes:
      print("input_arrivaal",x.inp_arrival)
      print("Inputs",x.inputs)
      print("Outputs",x.outputs)
+     print("Arrival time",x.max_out_arrival)
      print("Required Arrival TIme",C.req_arr_times[count])
      print("slack" ,C.slacks[count])
      count=count+1
      print("\n\n\n")
-
+'''
 print("Node 23")
 print(C.nodes[6].outp_arrival)
 print(C.nodes[6].inp_arrival)
@@ -61,4 +62,4 @@ print(C.nodes[8].inputs)
 print("Node 19")
 print(C.nodes[10].outp_arrival)
 print(C.nodes[10].inp_arrival)
-print(C.nodes[10].inputs)
+print(C.nodes[10].inputs)'''
