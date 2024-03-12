@@ -22,12 +22,12 @@ for x in lines:
 
 C.LUT_parsing('sample_NLDM.lib')
 C.output_capacitance()
-C.circuit_to_file('ckt_details.txt')
+#C.circuit_to_file('ckt_details.txt')
 C.circuit_delay()
 print("circuit_delay done")
 C.required_times()
 C.slacks_find()
-print(C.req_arr_times)
+#print(C.req_arr_times)
 
 count=0
 for x in C.nodes:

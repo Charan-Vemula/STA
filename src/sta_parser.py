@@ -107,7 +107,7 @@ class LUT:
         output_slew_string = re.search('output_slew\([\da-zA-Z_){(".,;]+\}',x).group(0) #extracting the output slew block
         index_1_list = re.search('[0-9,.][0-9,.]+',re.search('index_1 *\( *"[\d,.]+"\)',cell_Delay_string).group(0)).group(0).split(sep=',')    #getting a string list of index1 from the cell delay string
         index_2_list = re.search('[0-9,.][0-9,.]+',re.search('index_2 *\( *"[\d,.]+"\)',cell_Delay_string).group(0)).group(0).split(sep=',')    #getting a string list of index2 from the cell delay string
-        print(index_2_list)
+        #print(index_2_list)
         self.Tau_in_vals = index_1_list #assigning the values of index1
         self.Cload_vals = index_2_list  #assigning the values of index2
         cell_delay_values = re.search('["0-9.,]+',re.search('values[("0-9.,)]+',cell_Delay_string).group(0)).group(0).replace('","','";"').split(sep=';')   #getting a list of string which contains row of values of cell delay
@@ -323,10 +323,10 @@ class circuit(Node,LUT):
                 self.LUT_list.append(c)         #creating a list of LUT objects
                 self.LUT_dict[re.match(r'^([A-Z]+)' ,c.Allgate_name).group(0)]=len(self.LUT_list)-1
         
-        for x in self.LUT_list:
-            x.display()
+        #for x in self.LUT_list:
+          #  x.display()
 
-        print(list(self.LUT_dict))
+        #print(list(self.LUT_dict))
 
     def output_capacitance(self):
         for a in self.nodes:
@@ -343,7 +343,7 @@ class circuit(Node,LUT):
                 #    a.Cload = a.Cload + (self.LUT_list[self.LUT_dict[b.outname]].capacitance) * int(multiplier/2)
     def circuit_delay(self):
         queue=self.inputs
-        print(queue)
+        #print(queue)
         while(len(queue)!=0):
             a=queue.pop(0)
             if self.nodes[self.dict[a]].outname == 'INPUT':
@@ -363,7 +363,7 @@ class circuit(Node,LUT):
                             break
                 
                 if len(self.nodes[self.dict[a]].inputs) == len(self.nodes[self.dict[a]].inp_arrival):
-                    print(a,"ready")
+                    #print(a,"ready")
                     for i in range(len(self.nodes[self.dict[a]].inputs)):
                         delay,slew=self.LUT_list[self.LUT_dict[self.nodes[self.dict[a]].outname]].findout_delay(self.nodes[self.dict[a]].Tau_in[i],self.nodes[self.dict[a]].Cload)
                         if len(self.nodes[self.dict[a]].inputs)>2:
@@ -371,8 +371,8 @@ class circuit(Node,LUT):
                             slew = slew * int(len(self.nodes[self.dict[a]].inputs)/2)
                         self.nodes[self.dict[a]].outp_arrival.append( self.nodes[self.dict[a]].inp_arrival[i] + delay)
                         self.nodes[self.dict[a]].outp_slews.append(slew)
-                    print("delay",self.nodes[self.dict[a]].outp_arrival)
-                    print("slews",self.nodes[self.dict[a]].outp_slews)
+                    #print("delay",self.nodes[self.dict[a]].outp_arrival)
+                    #print("slews",self.nodes[self.dict[a]].outp_slews)
                     self.nodes[self.dict[a]].max_out_arrival = max(self.nodes[self.dict[a]].outp_arrival)
                     for i in range(len(self.nodes[self.dict[a]].outp_arrival)):
                         if self.nodes[self.dict[a]].outp_arrival[i] == self.nodes[self.dict[a]].max_out_arrival:
@@ -382,7 +382,7 @@ class circuit(Node,LUT):
                             queue.append(x)
                 else:
                     queue.append(a)
-            print(queue)
+            #print(queue)
 
     def required_times(self):
         mx=0.00
@@ -394,19 +394,19 @@ class circuit(Node,LUT):
         count=0
         while(len(queue)!=0):
             count=count+1
-            print(queue)
-            print(visited)
+            #print(queue)
+            #print(visited)
             a=queue.pop(0)
             traverse=1
             ##to check if all the fanouts of the present node are visited except itself
             for x in self.nodes[self.dict[a]].outputs:
-                print(x,a)
+                #print(x,a)
                 if x!=a:
                     if visited[self.dict[x]]==0:
                         queue.append(a)
                         traverse=0
                         break
-            print(traverse)
+            #print(traverse)
             if traverse==1:
                 delay=0.00
                 for i in range(len(self.nodes[self.dict[a]].outp_arrival)):
@@ -415,10 +415,8 @@ class circuit(Node,LUT):
                     if self.nodes[self.dict[a]].inputs[i] not in queue:
                         queue.append(self.nodes[self.dict[a]].inputs[i])
                 visited[self.dict[a]]=1
-            if count>30:
-                break
-        print(count)
-        print(self.req_arr_times)
+        #print(count)
+        #print(self.req_arr_times)
 
     def slacks_find(self):
         self.slacks=[0.00]*len(self.nodes)
