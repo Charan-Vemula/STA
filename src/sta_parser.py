@@ -245,8 +245,6 @@ class LUT:
             ci=len(self.Cload_vals)-2
             cl=float(self.Cload_vals[ci])
             cu=float(self.Cload_vals[ci+1])
-        print(ti)
-        print(ci)
         #print(ti)
         #print(ci)
         #print("input slew",tl,",",tu)
