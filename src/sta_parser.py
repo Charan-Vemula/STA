@@ -383,12 +383,13 @@ class circuit(Node,LUT):
                     for i in range(len(self.nodes[self.dict[a]].inputs)):
                         delay,slew=self.LUT_list[self.LUT_dict[self.nodes[self.dict[a]].outname]].findout_delay(self.nodes[self.dict[a]].Tau_in[i],self.nodes[self.dict[a]].Cload)
                         if len(self.nodes[self.dict[a]].inputs)>2:
-                            delay = delay * int(len(self.nodes[self.dict[a]].inputs)/2)
-                            slew = slew * int(len(self.nodes[self.dict[a]].inputs)/2)
+                            delay = delay * (len(self.nodes[self.dict[a]].inputs)/2)
+                            slew = slew * (len(self.nodes[self.dict[a]].inputs)/2)
                         self.nodes[self.dict[a]].outp_arrival.append( self.nodes[self.dict[a]].inp_arrival[i] + delay)
                         self.nodes[self.dict[a]].outp_slews.append(slew)
                     #print("delay",self.nodes[self.dict[a]].outp_arrival)
                     #print("slews",self.nodes[self.dict[a]].outp_slews)
+                    
                     self.nodes[self.dict[a]].max_out_arrival = max(self.nodes[self.dict[a]].outp_arrival)
                     for i in range(len(self.nodes[self.dict[a]].outp_arrival)):
                         if self.nodes[self.dict[a]].outp_arrival[i] == self.nodes[self.dict[a]].max_out_arrival:
@@ -438,7 +439,20 @@ class circuit(Node,LUT):
         self.slacks=[0.00]*len(self.nodes)
         for i in range(len(self.nodes)):
             self.slacks[i]=self.req_arr_times[i]-self.nodes[i].max_out_arrival
-    
+
+    def path_find(self):
+        mn=float('inf')
+        for x in self.outputs:
+            mn =min(mn,self.slacks[self.dict[x]])
+        
+        for x in self.outputs:
+            if self.slacks[self.dict[x]]==mn:
+                output=x
+                break
+        
+        current=output
+        string='OUTPUT-'+str(current)
+        return string
 
             
 

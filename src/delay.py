@@ -2,7 +2,7 @@ import re,sys
 from sta_parser import circuit, LUT
 
 C=circuit()
-C.circuit_parsing('c17.bench')
+C.circuit_parsing('c432.bench')
 
 
 lut_list=[]
@@ -31,16 +31,8 @@ C.slacks_find()
 
 count=0
 for x in C.nodes:
-     print("node",x.name)
-     print("Outp_arrival",x.outp_arrival)
-     print("input_arrivaal",x.inp_arrival)
-     print("Inputs",x.inputs)
-     print("Outputs",x.outputs)
-     print("Arrival time",x.max_out_arrival)
-     print("Required Arrival TIme",C.req_arr_times[count])
-     print("slack" ,C.slacks[count])
+     print(x.outname,'-',x.name,  '    ' ,round(x.Cload,5),'    ', round(x.max_out_arrival*1000,5),'    ' ,round(x.Tau_out*1000,5),'    ' ,round(C.req_arr_times[count]*1000,5),'    ',round(C.slacks[count]*1000,5) )
      count=count+1
-     print("\n\n\n")
 '''
 print("Node 23")
 print(C.nodes[6].outp_arrival)
