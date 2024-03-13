@@ -7,6 +7,7 @@ https://www.geeksforgeeks.org/command-line-arguments-in-python/
 
 import re
 import sys
+import argparse
 
 
 class Node:
@@ -83,6 +84,9 @@ class Node:
             file.write(f"{a}\n")
         else:
             file.write(self.faninstr + "\n")
+
+
+        
 
 
 class LUT:
@@ -279,6 +283,7 @@ class circuit(Node,LUT):
         self.LUT_dict={}
         self.req_arr_times=[]
         self.slacks=[]
+        self.ckt_delay=0.00
     
     def add_new_node(self):    #adds new nodes to circuit used in the function later
         new_node = Node()
@@ -307,7 +312,7 @@ class circuit(Node,LUT):
                         self.add_new_node()
                         self.dict[A[0]] = len(self.nodes)-1
                         self.nodes[self.dict[A[0]]].name=A[0]
-                    else:
+                    else:                                       ##case for outputs cause outputs are already specifically declared. Handles the case of inputs and outputs
                         self.nodes[self.dict[A[0]]].name=A[0]
                         self.nodes[self.dict[A[0]]].outputs.append(A[0])
 
@@ -324,8 +329,34 @@ class circuit(Node,LUT):
                         self.nodes[self.dict[A[i]]].outputs.append(A[0])
 
     def circuit_to_file(self,file):
-        for x in self.nodes:
-            x.print_name()
+        with open(file,'w') as f:
+            f.write(str(len(self.inputs))+' primary inputs'+'\n')
+            f.write(str(len(self.outputs))+' primary outputs'+'\n')
+            gates_list={}
+            for x in self.nodes:
+                if x.outname!='INPUT' and x.outname!='OUTPUT':
+                    if x.outname in list(gates_list):
+                        gates_list[x.outname]=gates_list[x.outname]+1
+                    else:
+                        gates_list[x.outname]=1
+            gates_summary=''
+            for key,value in gates_list.items():
+                if gates_summary=='':
+                    gates_summary=str(value)+' '+key+' '+'gates'
+                else:
+                    gates_summary=gates_summary+','+str(value)+' '+key+' '+'gates'
+            f.write(gates_summary+'\n')
+            f.write('Fanout...'+'\n')
+            self.stringify_fanout()
+            for x in self.nodes:
+                if(x.outname!='INPUT'):
+                    f.write(x.fanoutstr+'\n')
+            f.write('Fanin...'+'\n')
+            self.stringify_fanin()
+            for x in self.nodes:
+                if(x.outname!='INPUT'):
+                    f.write(x.faninstr+'\n')
+
 
     def LUT_parsing(self,file):
         file='sample_NLDM.lib'
@@ -499,174 +530,138 @@ class circuit(Node,LUT):
                     break
         string=self.nodes[self.dict[current]].outname +'-'+ self.nodes[self.dict[current]].name + ','+string
         return string
-
-            
-
-
-
-
-            
-
-A=sys.argv              #reading the arguments in the command line
-option='read_NLDM'
-file_name=''
-read_NLDM_option = ''
-if len(A)==3:
-    option=A[1].replace('-','')
-    file_name=A[2]
-elif len(A)==4:
-    option=A[2].replace('-','')
-    file_name=A[3]
-    read_NLDM_option=A[1].replace('-','')
-
-#print(A)
-
-if option == 'read_ckt':
-    input_count=0
-    output_count=0
-    gate_dict={}
-    with open(file_name,"r") as f:                      #opening the file
-        content=f.read()
-        content = re.sub("\n","",re.sub("#.*\n","\n",content))          #removing the comments and endline gaps
-        lines = re.split('\)',content)              #splitting the lines using the )
-
-    #print(len(lines))
-    ckt = []
-    dictionary = {}
-    dict_len = 0
-    for x in lines:                         #creating a node for each element which has been placed in the file
-        y=x.replace(' ','').replace('=',' ').replace('(',' ').replace(',',' ')      #replacimg the string seperators using spaces
-        A=y.split(sep=' ')                  #splitting the string so that each valid element is sent to each value of list
-
-        if A[0]=='INPUT':
-            c=Node()
-            c.naming(A[1], A[0])
-            ckt.append(c)
-            dictionary[A[1]]=dict_len           #adding the node names to a dictionry so that we can get the nodes needed to be added easily later on
-            dict_len=dict_len+1
-            input_count = input_count + 1       #for input node counts
-        elif A[0]=='OUTPUT':
-            c=Node()
-            c.naming(A[1], A[0])
-            c.fanout(A[1],A[0])
-            ckt.append(c)
-            dictionary[A[1]]=dict_len       #adding the node names to a dictionry so that we can get the nodes needed to be added easily later on
-            dict_len=dict_len+1
-            output_count = output_count + 1     #for output node counts
-        else:
-            if len(A)!=1:               #to ignore the last element in the list which has an endline character
-                if A[0] not in list(dictionary):
-                    c=Node()
-                    c.naming(A[0],A[1])
-                    ckt.append(c)
-                    dictionary[A[0]]=dict_len
-                    dict_len=dict_len+1
-
-
-    for x in lines:             #to add fanins and fanouts to the nodes. This can be done in the previous loop itslef if the nodes are ordered structurally. The basic structure is same as previous loop
-        y=x.replace(' ','').replace('=',' ').replace('(',' ').replace(',',' ')      
-        A=y.split(sep=' ')
-        if A[0] != 'INPUT' and A[0] != 'OUTPUT':
-            if len(A)!=1:
-                if ckt[dictionary[A[0]]].is_output():           #checking if the given node is a output node
-                    ckt[dictionary[A[0]]].naming(A[0],A[1])
-                    ckt[dictionary[A[0]]].fanout(A[0],'OUTPUT')     #adding itself as the output node
-                    #print("check")
-                    if A[1] in list(gate_dict):             #for finding out if a gate has already been found
-                        gate_dict[A[1]] = gate_dict[A[1]] + 1
-                    else:                                   #if not found entering a new entry with count 1
-                        gate_dict[A[1]] = 1
-
-                    for i in range(2,len(A)):               #for writing the fanin for the output node and fanouts for the input nodes
-                        ckt[dictionary[A[0]]].fanin(A[i], ckt[dictionary[A[i]]].outname_node())
-                        ckt[dictionary[A[i]]].fanout(A[0],A[1])
-                    '''IN A the 0 has output node 1 has gate name and the next all are inputs'''
-                else:                   #if the node in consideration is not an output node. The  loop structure is almost similar except where we donot add itself to its fanout
-                    if A[1] in list(gate_dict):         
-                        gate_dict[A[1]] = gate_dict[A[1]] + 1
+    
+    def stringify_fanout(self):
+        for x in self.nodes:
+            str=x.outname+'-'+x.name+': '
+            for y in x.outputs:
+                if y!=x.name:
+                    if(str[len(str)-2]==':'):
+                        str=str+self.nodes[self.dict[y]].outname+'-'+self.nodes[self.dict[y]].name
                     else:
-                        gate_dict[A[1]] = 1
+                        str=str+', '+self.nodes[self.dict[y]].outname+'-'+self.nodes[self.dict[y]].name
+                else:
+                    if(str[len(str)-2]==':'):
+                        str=str+'OUTPUT'+'-'+self.nodes[self.dict[y]].name
+                    else:
+                        str=str+', '+'OUTPUT'+'-'+self.nodes[self.dict[y]].name
+            x.fanoutstr=str
 
-                    for i in range(2,len(A)):
-                        ckt[dictionary[A[0]]].fanin(A[i], ckt[dictionary[A[i]]].outname_node())
-                        ckt[dictionary[A[i]]].fanout(A[0],A[1])
+    def stringify_fanin(self):
+        for x in self.nodes:
+            str=x.outname+'-'+x.name+': '
+            for y in x.inputs:
+                if (str[len(str)-2]==':'):
+                    str=str+self.nodes[self.dict[y]].outname+'-'+self.nodes[self.dict[y]].name
+                else:
+                    str=str+', '+self.nodes[self.dict[y]].outname+'-'+self.nodes[self.dict[y]].name
+            x.faninstr=str
+    
+    def LUT_delays_txt_file(self,file):
+        with open(file,'w') as f:
+            for x in self.LUT_list:
+                if x.Allgate_name not in ['NOT_X1','BUFF_X1']:
+                    f.write('cell: '+x.Allgate_name+'\n')
+                    f.write('input  slews: ')
+                    for i in range(len(x.Tau_in_vals)):
+                        if i==0:
+                            f.write(x.Tau_in_vals[i])
+                        else:
+                            f.write(','+x.Tau_in_vals[i])
+                    f.write('\nload  cap: ')
+                    for i in range(len(x.Cload_vals)):
+                        if i==0:
+                            f.write(x.Cload_vals[i])
+                        else:
+                            f.write(','+x.Cload_vals[i])
+                    f.write('\n\ndelays:\n')
+                    for i in range(len(x.All_delays)):
+                        for j in range(len(x.All_delays[i])):
+                            if j==0:
+                                f.write(x.All_delays[i][j])
+                            else:
+                                f.write(','+x.All_delays[i][j])
+                        f.write(';\n')
+                    f.write('\n\n')
+
+    def LUT_slews_txt_file(self,file):
+        with open(file,'w') as f:
+            for x in self.LUT_list:
+                if x.Allgate_name not in ['NOT_X1','BUFF_X1']:
+                    f.write('cell: '+x.Allgate_name+'\n')
+                    f.write('input  slews: ')
+                    for i in range(len(x.Tau_in_vals)):
+                        if i==0:
+                            f.write(x.Tau_in_vals[i])
+                        else:
+                            f.write(','+x.Tau_in_vals[i])
+                    f.write('\nload  cap: ')
+                    for i in range(len(x.Cload_vals)):
+                        if i==0:
+                            f.write(x.Cload_vals[i])
+                        else:
+                            f.write(','+x.Cload_vals[i])
+                    f.write('\n\ndelays:\n')
+                    for i in range(len(x.All_slews)):
+                        for j in range(len(x.All_slews[i])):
+                            if j==0:
+                                f.write(x.All_slews[i][j])
+                            else:
+                                f.write(','+x.All_slews[i][j])
+                        f.write(';\n')
+                    f.write('\n\n')
+    
+    def circuit_traversal(self,file,ip_file):
+        for x in self.nodes:
+            self.ckt_delay=max(self.ckt_delay,x.max_out_arrival)
+        with open(file,'w') as f:
+            f.write('Circuit delay: ' + str(round(self.ckt_delay*1000,5))+'ps\n\n')
+            f.write('Gate slacks:\n')
+
+            with open(ip_file,'r') as r:
+                content=r.read()
+                content = re.sub("\n","",re.sub("#.*\n","\n",content))          #removing the comments and endline gaps
+                lines = re.split('\)',content)              #splitting the lines using the )
+        
+            for x in lines:
+                y=x.replace(' ','').replace('=',' ').replace('(',' ').replace(',',' ')      #replacimg the string seperators using spaces
+                A=y.split(sep=' ')                  #splitting the string so that each valid element is sent to each value of list
+                if len(A)!=1:
+                    if A[0] == 'INPUT' or A[0] == 'OUTPUT':
+                        f.write(A[0]+'-'+A[1]+': '+str(round(self.slacks[self.dict[A[1]]]*1000,5))+'ps\n')
+                    else:
+                        f.write(A[1]+'-'+A[0]+': '+str(round(self.slacks[self.dict[A[0]]]*1000,5))+'ps\n')
+            f.write('\n\nCritical path:\n\n')
+            f.write(self.path_find())
+            
+
+
+
                 
-    '''The below code till else is for printing out the output in the required format or writing it to a seperate file'''
+# Initialize the parser
+parser = argparse.ArgumentParser()
 
-    with open("ckt_details.txt","w") as op_file:
-        op_file.write(f"{input_count} primary inputs\n")
-        op_file.write(f"{output_count} primary outputs\n")
-    gate_count_str=''
-    for x in list(gate_dict):
-        if gate_count_str!='':
-            gate_count_str = gate_count_str + '\n' + str(gate_dict[x]) + ' ' + x + " gates" 
-        else:
-            gate_count_str = gate_count_str + str(gate_dict[x]) + ' ' + x + " gates"
+# Add arguments
+parser.add_argument("--read_ckt", type=str, help="File name of the circuit which neads to be analysed")
+parser.add_argument("--read_nldm", type=str, help="The file name which contains all the values")
+parser.add_argument("--delays",action='store_true', help="Type of 2d arrays to be displayed")
+parser.add_argument("--slews",action='store_true', help="Type of 2d arrays to be displayed")
+# Parse the arguments
+args = parser.parse_args()
 
-    with open("ckt_details.txt","a") as op_file:
-        op_file.write(f"{gate_count_str}\n")
-        op_file.write("Fanout...\n")
-
-    for x in lines:
-        y=x.replace(' ','').replace('=',' ').replace('(',' ').replace(',',' ')
-        A=y.split(sep=' ')
-        if len(A)!=1:
-            if A[0]!='INPUT' and A[0]!='OUTPUT':
-                with open("ckt_details.txt","a") as op_file:
-                    ckt[dictionary[A[0]]].fanout_print(A[1],op_file)
-
-    with open("ckt_details.txt","a") as op_file:
-        op_file.write("Fanin...\n")
-    for x in lines:
-        y=x.replace(' ','').replace('=',' ').replace('(',' ').replace(',',' ')
-        A=y.split(sep=' ')
-        if len(A)!=1:        
-            if A[0]!='INPUT' and A[0]!='OUTPUT':
-                with open("ckt_details.txt","a") as op_file:
-                    ckt[dictionary[A[0]]].fanin_print(A[1],op_file)
-
-
-
-
-
-
-'''
-under cell delay index1 are input slews index 2 are load cap and values are delays
-match = re.search('output_slew\([\da-zA-Z_){(".,;]+\}',x)  for output slew
-match = re.search('cell_delay\([\da-zA-Z_){(".,;]+\}',x) for cell_delay
-match = re.search('index_1 *\( *"[\d,.]+"\)',x) for index_1
-'''
-
-
-if option=='read_nldm':
-
-    with open(file_name,"r") as f:          #reading the file
-        content =f.read()
-        content =content.replace("\n","").replace("\t","").replace(" ","").replace("\\","")         ##replacing the endlines and tabs and spaces so that the string will be in one line
-        content = re.sub("\/\*.*\*\/","",content)           ## removing the coments which are of the format /*.....*/.
-
-        lines = re.split('cell *?\(',content)           ##splitting each celll based on the format given which is cell(
-    #print(read_NLDM_option)
-    A = []  
-    for x in lines:
-        if x[0:7] != 'library':         # the string part which starts with library when split in the explained format has the capacitances which is currently not required for phase 1 so ignored that part
-            c=LUT()     #creating new LUT
-            c.assign_data(x)    #filling the LUT object with its required data
-            A.append(c)         #creating a list of LUT objects
-
-    '''for x in A:
-        x.display()
-    '''
-    if read_NLDM_option == 'delays':
-        with open("delay_LUT.txt","w") as op_file:
-            op_file.write("")
-        for x in A:
-            x.display_delays()  ##using display function to write the delay file
-            #print('\n')
-
-    elif read_NLDM_option == 'slews':
-        with open("slew_LUT.txt","w") as op_file:
-            op_file.write("")
-        for x in A:
-            x.display_slews()   ##using the display function to write the slew file
-            #print('\n')
+# Access the values passed via arguments
+read_ckt = args.read_ckt
+read_nldm = args.read_nldm
+delays = args.delays
+slews = args.slews
+if(read_ckt!=None):
+    C=circuit()
+    C.circuit_parsing(read_ckt)
+    C.circuit_to_file('ckt_details.txt')
+if read_nldm!=None:
+    C=circuit()
+    C.LUT_parsing(read_nldm)
+    if(delays):
+        C.LUT_delays_txt_file('delay_LUT.txt')
+    if(slews):
+        C.LUT_slews_txt_file('slew_LUT.txt')
